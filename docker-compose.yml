@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: valola-n8n-dev
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=valola2026
+      - N8N_ENCRYPTION_KEY=tu_clave_aqui
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=valola
+      - DB_POSTGRESDB_PASSWORD=valola_password
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./n8n/data:/home/node/.n8n
+      - ./n8n/backups:/backups
+    networks:
+      - valola-network
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: valola-postgres-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=valola
+      - POSTGRES_PASSWORD=valola_password
+      - POSTGRES_DB=valola
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - valola-network
+
+  fastapi:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    container_name: valola-fastapi-dev
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://valola:valola_password@postgres:5432/valola
+      - OPENAI_API_KEY=sk-proj-tu_key_aqui
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi:/app
+      - ./fastapi/uploads:/uploads
+    networks:
+      - valola-network
+    depends_on:
+      - postgres
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: valola-pgadmin-dev
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@valola.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    ports:
+      - "5050:80"
+    networks:
+      - valola-network
+    depends_on:
+      - postgres
+
+networks:
+  valola-network:
+    driver: bridge

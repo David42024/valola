@@ -1,0 +1,23 @@
+*.sqlite
+n8n/data/
+postgres/data/
+uploads/
+
+# Docker
+!Dockerfile
+.dockerignore
+
+# Secrets
+*.pem
+*.key
+*.crt
+
+# Temporary
+tmp/
+temp/
+*.tmp
+.env
+*.pyc
+__pycache__/
+*.log
+.DS_Store
